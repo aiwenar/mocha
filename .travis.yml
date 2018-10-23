@@ -7,13 +7,13 @@ stages:
 
 # defaults
 language: node_js
-node_js: '9'
+node_js: '10'
 # `nvm install` happens before the cache is restored, which means
 # we must install our own npm elsewhere (`~/npm`)
 before_install: |
   [[ ! -x ~/npm/node_modules/.bin/npm ]] && {
     # caching feature creates `~/npm` for us
-    cd ~/npm && npm install npm
+    cd ~/npm && npm install npm@^5
     cd -
   } || true
   # avoids bugs around https://github.com/travis-ci/travis-ci/issues/5092
@@ -32,13 +32,13 @@ jobs:
 
     - &node
       script: npm start test.node
+      node_js: '9'
+
+    - <<: *node
       node_js: '8'
 
     - <<: *node
       node_js: '6'
-
-    - <<: *node
-      node_js: '4'
 
     - script: npm start test.bundle test.browser
       install: npm ci # we need the native modules here
@@ -67,13 +67,13 @@ jobs:
           - node_modules # npm install, unlike npm ci, doesn't wipe node_modules
 
     - <<: *smoke
+      node_js: '9'
+
+    - <<: *smoke
       node_js: '8'
 
     - <<: *smoke
       node_js: '6'
-
-    - <<: *smoke
-      node_js: '4'
 
     - stage: precache
       script: true

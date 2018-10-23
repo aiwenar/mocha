@@ -5,11 +5,11 @@ var Suite = Mocha.Suite;
 var Runner = Mocha.Runner;
 var Test = Mocha.Test;
 
-describe('json reporter', function () {
+describe('json reporter', function() {
   var suite, runner;
   var testTitle = 'json test 1';
 
-  beforeEach(function () {
+  beforeEach(function() {
     var mocha = new Mocha({
       reporter: 'json'
     });
@@ -19,69 +19,79 @@ describe('json reporter', function () {
     var mochaReporter = new mocha._reporter(runner);
   });
 
-  it('should have 1 test failure', function (done) {
-    var error = { message: 'oh shit' };
+  it('should have 1 test failure', function(done) {
+    var error = {message: 'oh shit'};
 
-    suite.addTest(new Test(testTitle, function (done) {
-      done(new Error(error.message));
-    }));
+    suite.addTest(
+      new Test(testTitle, function(done) {
+        done(new Error(error.message));
+      })
+    );
 
-    runner.run(function (failureCount) {
-      expect(failureCount).to.be(1);
-      expect(runner).to.have.property('testResults');
-      expect(runner.testResults).to.have.property('failures');
-      expect(runner.testResults.failures).to.be.an('array');
-      expect(runner.testResults.failures).to.have.length(1);
-
-      var failure = runner.testResults.failures[0];
-      expect(failure).to.have.property('title', testTitle);
-      expect(failure.err.message).to.equal(error.message);
-      expect(failure).to.have.property('err');
-
+    runner.run(function(failureCount) {
+      expect(runner, 'to satisfy', {
+        testResults: {
+          failures: [
+            {
+              title: testTitle,
+              err: {
+                message: error.message
+              }
+            }
+          ]
+        }
+      });
+      expect(failureCount, 'to be', 1);
       done();
     });
   });
 
-  it('should have 1 test pending', function (done) {
+  it('should have 1 test pending', function(done) {
     suite.addTest(new Test(testTitle));
 
-    runner.run(function (failureCount) {
-      expect(failureCount).to.be(0);
-      expect(runner).to.have.property('testResults');
-      expect(runner.testResults).to.have.property('pending');
-      expect(runner.testResults.pending).to.be.an('array');
-      expect(runner.testResults.pending).to.have.length(1);
-
-      var pending = runner.testResults.pending[0];
-      expect(pending).to.have.property('title', testTitle);
-
+    runner.run(function(failureCount) {
+      expect(runner, 'to satisfy', {
+        testResults: {
+          pending: [
+            {
+              title: testTitle
+            }
+          ]
+        }
+      });
+      expect(failureCount, 'to be', 0);
       done();
     });
   });
 
-  it('should handle circular objects in errors', function (done) {
+  it('should handle circular objects in errors', function(done) {
     var testTitle = 'json test 1';
-    function CircleError () {
+    function CircleError() {
       this.message = 'oh shit';
       this.circular = this;
     }
     var error = new CircleError();
 
-    suite.addTest(new Test(testTitle, function (done) {
-      throw error;
-    }));
+    suite.addTest(
+      new Test(testTitle, function(done) {
+        throw error;
+      })
+    );
 
-    runner.run(function (failureCount) {
-      expect(failureCount).to.equal(1);
-      expect(runner).to.have.property('testResults');
-      expect(runner.testResults).to.have.property('failures');
-      expect(runner.testResults.failures).to.be.an(Array);
-      expect(runner.testResults.failures).to.have.length(1);
-
-      var failure = runner.testResults.failures[0];
-      expect(failure).to.have.property('title', testTitle);
-      expect(failure).to.have.property('err');
-
+    runner.run(function(failureCount) {
+      expect(runner, 'to satisfy', {
+        testResults: {
+          failures: [
+            {
+              title: testTitle,
+              err: {
+                message: error.message
+              }
+            }
+          ]
+        }
+      });
+      expect(failureCount, 'to be', 1);
       done();
     });
   });

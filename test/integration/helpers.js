@@ -25,13 +25,13 @@ module.exports = {
    * @param {Array<string>} args - Extra args to mocha executable
    * @param {Function} done - Callback
    */
-  runMocha: function (fixturePath, args, done) {
+  runMocha: function(fixturePath, args, done) {
     var path;
 
     path = resolveFixturePath(fixturePath);
     args = args || [];
 
-    invokeMocha(args.concat(['-C', path]), function (err, res) {
+    invokeMocha(args.concat(['-C', path]), function(err, res) {
       if (err) {
         return done(err);
       }
@@ -48,13 +48,16 @@ module.exports = {
    * @param {string[]} args - Array of args
    * @param {Function} fn - Callback
    */
-  runMochaJSON: function (fixturePath, args, fn) {
+  runMochaJSON: function(fixturePath, args, fn) {
     var path;
 
     path = resolveFixturePath(fixturePath);
     args = args || [];
 
-    return invokeMocha(args.concat(['--reporter', 'json', path]), function (err, res) {
+    return invokeMocha(args.concat(['--reporter', 'json', path]), function(
+      err,
+      res
+    ) {
       if (err) return fn(err);
 
       try {
@@ -67,43 +70,19 @@ module.exports = {
       fn(null, result);
     });
   },
+  runMochaJSONRaw: function(fixturePath, args, fn) {
+    var path;
 
-  /**
-   * Returns an array of diffs corresponding to exceptions thrown from specs,
-   * given the plaintext output (-C) of a mocha run.
-   *
-   * @param  {string}   output
-   * returns {string[]}
-   */
-  getDiffs: function (output) {
-    var diffs, i, inDiff, inStackTrace;
+    path = resolveFixturePath(fixturePath);
+    args = args || [];
 
-    diffs = [];
-    output.split('\n').forEach(function (line) {
-      if (line.match(/^\s{2}\d+\)/)) {
-        // New spec, e.g. "1) spec title"
-        diffs.push([]);
-        i = diffs.length - 1;
-        inStackTrace = false;
-        inDiff = false;
-      } else if (!diffs.length || inStackTrace) {
-        // Haven't encountered a spec yet
-        // or we're in the middle of a stack trace
+    return invokeSubMocha(args.concat(['--reporter', 'json', path]), function(
+      err,
+      resRaw
+    ) {
+      if (err) return fn(err);
 
-      } else if (line.indexOf('+ expected - actual') !== -1) {
-        inDiff = true;
-      } else if (line.match(/at Context/)) {
-        // At the start of a stack trace
-        inStackTrace = true;
-        inDiff = false;
-      } else if (inDiff) {
-        diffs[i].push(line);
-      }
-    });
-
-    // Ignore empty lines before/after diff
-    return diffs.map(function (diff) {
-      return diff.slice(1, -3).join('\n');
+      fn(null, resRaw);
     });
   },
 
@@ -137,14 +116,22 @@ module.exports = {
   resolveFixturePath: resolveFixturePath
 };
 
-function invokeMocha (args, fn, cwd) {
-  var output, mocha, listener;
-
-  output = '';
+function invokeMocha(args, fn, cwd) {
   args = [path.join(__dirname, '..', '..', 'bin', 'mocha')].concat(args);
-  mocha = spawn(process.execPath, args, { cwd: cwd });
 
-  listener = function (data) {
+  return _spawnMochaWithListeners(args, fn, cwd);
+}
+
+function invokeSubMocha(args, fn, cwd) {
+  args = [path.join(__dirname, '..', '..', 'bin', '_mocha')].concat(args);
+
+  return _spawnMochaWithListeners(args, fn, cwd);
+}
+
+function _spawnMochaWithListeners(args, fn, cwd) {
+  var output = '';
+  var mocha = spawn(process.execPath, args, {cwd: cwd});
+  var listener = function(data) {
     output += data;
   };
 
@@ -152,7 +139,7 @@ function invokeMocha (args, fn, cwd) {
   mocha.stderr.on('data', listener);
   mocha.on('error', fn);
 
-  mocha.on('close', function (code) {
+  mocha.on('close', function(code) {
     fn(null, {
       output: output.split('\n').join('\n'),
       code: code
@@ -162,17 +149,17 @@ function invokeMocha (args, fn, cwd) {
   return mocha;
 }
 
-function resolveFixturePath (fixture) {
+function resolveFixturePath(fixture) {
   return path.join('./test/integration/fixtures', fixture);
 }
 
-function getSummary (res) {
-  return ['passing', 'pending', 'failing'].reduce(function (summary, type) {
+function getSummary(res) {
+  return ['passing', 'pending', 'failing'].reduce(function(summary, type) {
     var pattern, match;
 
     pattern = new RegExp('  (\\d+) ' + type + '\\s');
     match = pattern.exec(res.output);
-    summary[type] = (match) ? parseInt(match, 10) : 0;
+    summary[type] = match ? parseInt(match, 10) : 0;
 
     return summary;
   }, res);
